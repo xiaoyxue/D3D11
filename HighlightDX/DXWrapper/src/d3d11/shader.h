@@ -3,21 +3,21 @@
 #include <d3dcompiler.h>
 #include <wrl/client.h>
 
-using Microsoft::WRL::ComPtr;
-
 namespace D3D11 {
 class VertexShader {
 private:
-  ComPtr<ID3D11VertexShader> shader_;
+  Microsoft::WRL::ComPtr<ID3D11VertexShader> shader_;
+  Microsoft::WRL::ComPtr<ID3DBlob> blob_;
 
 public:
   bool CompileFromSource(ID3D11Device *device, const char *source);
   ID3D11VertexShader *Get() const { return shader_.Get(); }
+  ID3DBlob *GetBlob() const { return blob_.Get(); }
 };
 
 class PixelShader {
 private:
-  ComPtr<ID3D11PixelShader> shader_;
+  Microsoft::WRL::ComPtr<ID3D11PixelShader> shader_;
 
 public:
   bool CompileFromSource(ID3D11Device *device, const char *source);

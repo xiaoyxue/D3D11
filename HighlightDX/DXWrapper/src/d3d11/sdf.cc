@@ -33,7 +33,8 @@ cbuffer Constants : register(b0)
     float2 iCenter;
 
     float iRadius;
-    float3 _padding;
+    float maxAnimationTime;
+    float2 _padding;
 };
 
 struct PSInput
@@ -58,7 +59,6 @@ float4 main(PSInput input) : SV_TARGET
     float2 fragCoord = input.uv * iResolution;
     float2 normalizedCoord = fragCoord - iResolution / 2.0;
     float2 b = iResolution / whFactor;
-    float maxAnimationTime = 2.0; // seconds
     float radiusRatio = min(animationTime / maxAnimationTime, 1.0);
     float d = 0.0;
     if (iType == 0 || iType == 1)
@@ -106,7 +106,8 @@ cbuffer Constants : register(b0)
     float2 iCenter;
 
     float iRadius;
-    float3 _padding;
+    float maxAnimationTime;
+    float2 _padding;
 };
 
 Texture2D inputTexture : register(t0);
@@ -160,7 +161,8 @@ cbuffer Constants : register(b0)
     float2 iCenter;
 
     float iRadius;
-    float3 _padding;
+    float maxAnimationTime;
+    float2 _padding;
 };
 
 Texture2D inputTexture : register(t0);
@@ -215,7 +217,8 @@ cbuffer Constants : register(b0)
     float2 iCenter;
 
     float iRadius;
-    float3 _padding;
+    float maxAnimationTime;
+    float2 _padding;
 };
 
 Texture2D bloomTexture : register(t0);
@@ -243,7 +246,6 @@ float4 main(PSInput input) : SV_TARGET
     float2 fragCoord = input.uv * iResolution;
     float2 normalizedCoord = fragCoord - iResolution / 2.0;
     float2 b = iResolution / whFactor;
-    float maxAnimationTime = 2.0; // seconds
     float radiusRatio = min(animationTime / maxAnimationTime, 1.0);
 
     float d = 0.0;
@@ -375,6 +377,7 @@ float4 main(PSInput input) : SV_TARGET
       constants.iType = static_cast<int>(DrawCommandType::FULLSCREEN);
       constants.iResolution[0] = static_cast<float>(fulls_screen_command->GetWidth() / 4.0);
       constants.iResolution[1] = static_cast<float>(fulls_screen_command->GetHeight() / 4.0);
+      constants.maxAnimationTime = 1.0f; //1s
     }
 
     if (command->GetType() == DrawCommandType::CIRCLE) {
@@ -386,8 +389,10 @@ float4 main(PSInput input) : SV_TARGET
       constants.iCenter[0] = ndc.x;
       constants.iCenter[1] = ndc.y;
       constants.iRadius = circle_command->GetRadius();
+      constants.maxAnimationTime = 1.f; 
       auto now = std::chrono::steady_clock::now();
       constants.animationTime = std::chrono::duration<float>(now - circle_command->GetAnimationStartTime()).count();
+
     }
 
     constants.iTime = iTime;
@@ -463,6 +468,7 @@ float4 main(PSInput input) : SV_TARGET
       constants.iType = static_cast<int>(DrawCommandType::FULLSCREEN);
       constants.iResolution[0] = static_cast<float>(fulls_screen_command->GetWidth() / 4.0);
       constants.iResolution[1] = static_cast<float>(fulls_screen_command->GetHeight() / 4.0);
+      constants.maxAnimationTime = 1.0f;
     }
 
     if (command->GetType() == DrawCommandType::CIRCLE) {
@@ -474,6 +480,7 @@ float4 main(PSInput input) : SV_TARGET
       constants.iCenter[0] = ndc.x;
       constants.iCenter[1] = ndc.y;
       constants.iRadius = circle_command->GetRadius();
+      constants.maxAnimationTime = 1.0f;
       auto now = std::chrono::steady_clock::now();
       constants.animationTime = std::chrono::duration<float>(now - circle_command->GetAnimationStartTime()).count();
     }

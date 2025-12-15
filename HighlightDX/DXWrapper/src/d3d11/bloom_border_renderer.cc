@@ -694,10 +694,10 @@ void BloomBorderRenderer::RenderComposite(DrawCommand* command,float iTime) {
 }
 
 void BloomBorderRenderer::RenderCompositeToTarget(DrawCommand* command, float iTime) {
-  context_->OMSetRenderTargets(1, &back_buffer_rtv_, nullptr);
+context_->OMSetRenderTargets(1, &back_buffer_rtv_, nullptr);
 
-  // Update constants
-  ShaderConstants constants = {};  // ✅ 初始化为 0
+// Update constants
+ShaderConstants constants = {};  // Initialize to zero
 
   if(command->GetType() == DrawCommandType::FULLSCREEN) {
     auto fullscreen_command = static_cast<DrawFullScreenCommand*>(command);

@@ -1,4 +1,4 @@
-#include "transparent_window.h"
+#include "overlay_window.h"
 #include "render_state.h"
 #include <windows.h>
 #include <WinUser.h>
@@ -16,7 +16,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
     return DefWindowProcW(hwnd, msg, wParam, lParam);
   }
 
-  auto* window = reinterpret_cast<TransparentWindow*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+  auto* window = reinterpret_cast<OverlayWindow*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
 
   switch (msg) {
   case WM_TIMER:
@@ -34,9 +34,12 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
         g_circle_num = 0;
       }
       ++g_circle_num;
-      std::unique_ptr<D3D11::DrawCommand> command = std::make_unique<D3D11::DrawCircleCommand>(g_circle_num * 100.f, g_circle_num * 100.f, 100.f);
+      std::unique_ptr<D3D11::DrawCommand> draw_circle_command = std::make_unique<D3D11::DrawCircleCommand>(g_circle_num * 100.f, g_circle_num * 100.f, 100.f);
+      std::unique_ptr<D3D11::DrawCommand> draw_cursor_command = std::make_unique<D3D11::DrawCursorCommand>(g_circle_num * 100.f, g_circle_num * 100.f);
+
       window->ClearDrawCommands();
-      window->AddDrawCommand(std::move(command));
+      window->AddDrawCommand(std::move(draw_circle_command));
+      window->AddDrawCommand(std::move(draw_cursor_command));
     }
     else if (wParam == static_cast<WPARAM>('F')) {
       int screenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -57,7 +60,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
   return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
-TransparentWindow::TransparentWindow(HINSTANCE hInstance, HWND hwnd) {
+OverlayWindow::OverlayWindow(HINSTANCE hInstance, HWND hwnd) {
   RECT rc;
   GetClientRect(hwnd, &rc);
 
@@ -70,7 +73,7 @@ TransparentWindow::TransparentWindow(HINSTANCE hInstance, HWND hwnd) {
   Initialize();
 }
 
-TransparentWindow::TransparentWindow(HINSTANCE hInstance, int width,
+OverlayWindow::OverlayWindow(HINSTANCE hInstance, int width,
                                      int height) {
   window_proc_ = WindowProc;
   width_ = width;
@@ -79,9 +82,9 @@ TransparentWindow::TransparentWindow(HINSTANCE hInstance, int width,
   Initialize();
 }
 
-TransparentWindow::~TransparentWindow() { DestroyWindow(hwnd_); }
+OverlayWindow::~OverlayWindow() { DestroyWindow(hwnd_); }
 
-void TransparentWindow::Initialize() {
+void OverlayWindow::Initialize() {
   const wchar_t *className = L"D3DExampleWindow";
   WNDCLASSEXW wc = {};
   wc.cbSize = sizeof(wc);
@@ -131,7 +134,7 @@ void TransparentWindow::Initialize() {
   }
 }
 
-int TransparentWindow::MainLoop() {
+int OverlayWindow::MainLoop() {
   MSG msg = {};
   bool running = true;
   while (running) {
@@ -158,35 +161,35 @@ int TransparentWindow::MainLoop() {
   return static_cast<int>(msg.wParam);
 }
 
-void TransparentWindow::DrawAll() {
-  if (RenderState::g_draw_box) {
+void OverlayWindow::DrawAll() {
+  if (RenderState::g_draw) {
     renderer_->Render(hwnd_);
   }
 }
 
-void TransparentWindow::Reset() {
+void OverlayWindow::Reset() {
   renderer_->Reset();
 }
 
-void TransparentWindow::AddDrawCommand(std::unique_ptr<D3D11::DrawCommand> command) {
+void OverlayWindow::AddDrawCommand(std::unique_ptr<D3D11::DrawCommand> command) {
   renderer_->AddDrawCommand(std::move(command));
 }
 
-void TransparentWindow::ClearDrawCommands() {
+void OverlayWindow::ClearDrawCommands() {
   renderer_->ClearDrawCommands();
 }
 
-void TransparentWindow::DeleteLastDrawCommand() {
+void OverlayWindow::DeleteLastDrawCommand() {
   renderer_->DeleteLastDrawCommand();
 }
 
-void TransparentWindow::SetTimerCallback(std::function<void()> callback, UINT milliseconds) {
+void OverlayWindow::SetTimerCallback(std::function<void()> callback, UINT milliseconds) {
   UINT_PTR timer_id = next_timer_id_++;
   timer_callbacks_[timer_id] = std::move(callback);
   SetTimer(hwnd_, timer_id, milliseconds, nullptr);
 }
 
-void TransparentWindow::OnTimer(UINT_PTR timer_id) {
+void OverlayWindow::OnTimer(UINT_PTR timer_id) {
   auto it = timer_callbacks_.find(timer_id);
   if (it != timer_callbacks_.end()) {
     it->second();

@@ -139,13 +139,15 @@
     <ClCompile Include="src\d3d11\blender_manager.cc" />
     <ClCompile Include="src\d3d11\bloom_border_renderer.cc" />
     <ClCompile Include="src\d3d11\highlight_renderer.cc" />
+    <ClCompile Include="src\d3d11\quad.cc" />
     <ClCompile Include="src\d3d11\render_target.cc" />
     <ClCompile Include="src\d3d11\sampler_manager.cpp" />
     <ClCompile Include="src\d3d11\sdf.cc" />
     <ClCompile Include="src\d3d11\shader.cc" />
+    <ClCompile Include="src\d3d11\texture.cc" />
     <ClCompile Include="src\main.cc" />
+    <ClCompile Include="src\window\overlay_window.cc" />
     <ClCompile Include="src\window\render_state.cc" />
-    <ClCompile Include="src\window\transparent_window.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\application.h" />
@@ -162,12 +164,13 @@
     <ClInclude Include="src\d3d11\renderer.h" />
     <ClInclude Include="src\d3d11\render_target.h" />
     <ClInclude Include="src\d3d11\shader.h" />
+    <ClInclude Include="src\d3d11\texture.h" />
     <ClInclude Include="src\mathematics\lingal.h" />
     <ClInclude Include="src\mathematics\Transform.h" />
     <ClInclude Include="src\system\threading.h" />
     <ClInclude Include="src\visual\Camera.h" />
+    <ClInclude Include="src\window\overlay_window.h" />
     <ClInclude Include="src\window\render_state.h" />
-    <ClInclude Include="src\window\transparent_window.h" />
     <ClInclude Include="src\window\window.h" />
   </ItemGroup>
   <ItemGroup>

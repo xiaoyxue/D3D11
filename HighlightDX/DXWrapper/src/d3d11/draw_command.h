@@ -83,19 +83,23 @@ namespace D3D11 {
 
   class DrawCursorCommand : public DrawCommand {
   public:
-    DrawCursorCommand(float x, float y, float rotate_ = 45.f / 180.0 * PI)
-      : DrawCommand(DrawCommandType::CURSOR), x_(x), y_(y), rotate_(rotate_), animation_start_time_(std::chrono::steady_clock::now())
+    DrawCursorCommand(float x, float y, float rotate_ = 45.f / 180.0 * PI, float displacementMagnitude = 100.f)
+      : DrawCommand(DrawCommandType::CURSOR), x_(x), y_(y), rotate_(rotate_),
+      animation_start_time_(std::chrono::steady_clock::now()),
+      displacementMagnitude_(displacementMagnitude)
     {
 
     }
     float GetX() const { return x_; }
     float GetY() const { return y_; }
     float GetRotate() const { return rotate_; }
+    float GetDisplacementMagnitude() const { return displacementMagnitude_; }
     std::chrono::steady_clock::time_point GetAnimationStartTime() const { return animation_start_time_; }
   private:
     float x_;
     float y_;
     float rotate_;
+    float displacementMagnitude_;
     std::chrono::steady_clock::time_point animation_start_time_;
   };
 

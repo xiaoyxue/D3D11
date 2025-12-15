@@ -1,6 +1,6 @@
 #pragma once
 #include <functional>
-#include "window/transparent_window.h"
+#include "window/overlay_window.h"
 
 class Application {
 public:
@@ -32,8 +32,8 @@ public:
   }
 
   void SetTimerCallback(std::function<void()> callback, UINT milliseconds) {
-    auto* transparent_window = static_cast<TransparentWindow*>(window_.get());
-    transparent_window->SetTimerCallback(std::move(callback), milliseconds);
+    auto* overlay_window = static_cast<OverlayWindow*>(window_.get());
+    overlay_window->SetTimerCallback(std::move(callback), milliseconds);
   }
 
 private:

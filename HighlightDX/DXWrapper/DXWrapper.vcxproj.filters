@@ -24,9 +24,6 @@
     <ClCompile Include="src\window\render_state.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\window\transparent_window.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\d3d11\bloom_border_renderer.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -48,15 +45,21 @@
     <ClCompile Include="src\d3d11\blender_manager.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\d3d11\texture.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\d3d11\quad.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\window\overlay_window.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\application.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\window\render_state.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\window\transparent_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\window\window.h">
@@ -111,6 +114,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\mathematics\Transform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\d3d11\texture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\window\overlay_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

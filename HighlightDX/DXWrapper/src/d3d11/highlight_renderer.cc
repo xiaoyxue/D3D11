@@ -1,5 +1,6 @@
 #include "highlight_renderer.h"
 #include "sdf.h"
+#include "quad.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -53,6 +54,19 @@ namespace D3D11 {
     sdf_->Initialize(device_.Get());
     sdf_->CreateSamplerState(&sampler_manager_);
     sdf_->CreateBendState(&blender_manager_);
+
+    // Init Quad
+    quad_ = std::make_unique<Quad>(width_, height_);
+    quad_->Initialize(device_.Get());
+    quad_->CreateSamplerState(&sampler_manager_);
+    quad_->CreateBendState(&blender_manager_);
+
+    // Load Quad texture: Auto-load OuterCursor.png
+    auto quad = static_cast<Quad*>(quad_.get());
+    if (!quad->LoadTexture(device_.Get(), context_.Get(), L"D:\\Code\\Work\\D3D11\\HighlightDX\\DXWrapper\\asset\\InnerCursor.png")) {
+      MessageBoxW(nullptr, L"Failed to load OuterCursor.png texture", L"Warning", MB_OK | MB_ICONWARNING);
+      // Continue execution even if texture loading fails, should not block initialization
+    }
 
     return true;
   }
@@ -236,12 +250,63 @@ namespace D3D11 {
 
   void HighlightRenderer::DrawSDF(DrawCommand* command, float time)
   {
+    // Ensure blend state is set
+    float blendFactor[4] = {0, 0, 0, 0};
+    context_->OMSetBlendState(blend_state_.Get(), blendFactor, 0xffffffff);
+    
     sdf_->Draw(context_.Get(), back_buffer_rtv_.Get(), command, time);
   }
 
   void HighlightRenderer::DrawQuad(DrawCommand* command, float time)
   {
+    if (!quad_) {
+      return;
+    }
 
+    // Only process CURSOR type commands
+    if (!command || command->GetType() != DrawCommandType::CURSOR) {
+      return;
+    }
+
+    auto quad = static_cast<Quad*>(quad_.get());
+    auto cursor_command = static_cast<DrawCursorCommand*>(command);
+    
+    // Set initial position (cursor position)
+    quad->SetPosition(cursor_command->GetX(), cursor_command->GetY());
+    
+    // Use default rotation (45 degrees counter-clockwise)
+    quad->SetRotation(45.0f / 180.0f * PI);
+    
+    // Set size
+    quad->SetSize(100.0f, 100.0f);
+    
+    // Keep scale constant at 1.0 (no scale animation)
+    quad->SetScale(1.0f, 1.0f);
+    
+    // Animation: Calculate translation matrix (like SimpleQuad)
+    auto now = std::chrono::steady_clock::now();
+    float animation_time = std::chrono::duration<float>(
+      now - cursor_command->GetAnimationStartTime()
+    ).count();
+    
+    constexpr float max_animation_time = 1.0f;
+    float animation_ratio = animation_time / max_animation_time;
+    if (animation_ratio > 1.0f) animation_ratio = 1.0f;
+    
+    auto translate_matrix = DirectX::XMMatrixTranslation(
+      100.0f * animation_ratio,
+      -100.0f * animation_ratio,
+      0.0f
+    );
+    
+    quad->SetTranslateMatrix(translate_matrix);
+
+    // Ensure blend state is set
+    float blendFactor[4] = {0, 0, 0, 0};
+    context_->OMSetBlendState(blend_state_.Get(), blendFactor, 0xffffffff);
+    
+    // Draw Quad
+    quad_->Draw(context_.Get(), back_buffer_rtv_.Get(), command, time);
   }
 
   void HighlightRenderer::DrawCommands(float time)
@@ -252,6 +317,7 @@ namespace D3D11 {
     std::lock_guard<std::mutex> lock(draw_commands_mutex_);
     for (auto& command : draw_commands_) {
       DrawSDF(command.get(), time);
+      DrawQuad(command.get(), time);
     }
   }
 
@@ -279,7 +345,7 @@ namespace D3D11 {
     DrawCommands(iTime);
 
     // SwapChain present
-    swap_chain_->Present(1, 0);
+    swap_chain_->Present(0, 0);
 
     // Update fps
     UpdateFps(hwnd);

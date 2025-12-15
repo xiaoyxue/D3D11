@@ -23,14 +23,14 @@ namespace D3D11 {
     // Total: 16 bytes
 
     float iRadius;
+    float maxAnimationTime;
     float _padding1;
     float _padding2;
-    float _padding3;
     // Total: 16 bytes
 
     ShaderConstants() : iType(0), iTime(0.0f), animationTime(0.0f),
-      whFactor(2.005f), iRadius(0.0f),
-      _padding1(0.0f), _padding2(0.0f), _padding3(0.0f) {
+      whFactor(2.005f), iRadius(0.0f), maxAnimationTime(2.0f),
+      _padding1(0.0f), _padding2(0.0f) {
       iResolution[0] = iResolution[1] = 0.0f;
       iCenter[0] = iCenter[1] = 0.0f;
     }

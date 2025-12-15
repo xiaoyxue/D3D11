@@ -1,6 +1,7 @@
 #include "shader.h"
 #include <cstring>
 
+using Microsoft::WRL::ComPtr;
 namespace D3D11 {
 static bool CompileShaderInternal(const char *source, const char *target,
                                   ID3DBlob **outBlob) {
@@ -21,13 +22,12 @@ static bool CompileShaderInternal(const char *source, const char *target,
 }
 
 bool VertexShader::CompileFromSource(ID3D11Device *device, const char *source) {
-  ComPtr<ID3DBlob> blob;
-  if (!CompileShaderInternal(source, "vs_5_0", &blob)) {
+  if (!CompileShaderInternal(source, "vs_5_0", &blob_)) {
     return false;
   }
 
   return SUCCEEDED(device->CreateVertexShader(
-      blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader_));
+      blob_->GetBufferPointer(), blob_->GetBufferSize(), nullptr, &shader_));
 }
 
 bool PixelShader::CompileFromSource(ID3D11Device *device, const char *source) {
