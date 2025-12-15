@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{60b6f8c8-7e4e-4325-94a9-951d0ab0aa49}</ProjectGuid>
-    <RootNamespace>SimpleWrapper</RootNamespace>
+    <ProjectGuid>{396df3bd-1717-45fa-8a45-2f0f47e3ee37}</ProjectGuid>
+    <RootNamespace>DXWrapper</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -76,8 +76,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Code\Work\D3D11\HighlightDX\DXWrapper\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -93,8 +93,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Code\Work\D3D11\HighlightDX\DXWrapper\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -108,8 +108,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Code\Work\D3D11\HighlightDX\DXWrapper\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -125,8 +125,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Code\Work\D3D11\HighlightDX\DXWrapper\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -135,29 +135,43 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Application.cpp" />
-    <ClCompile Include="src\D3D11\BloomBorderRenderer.cpp" />
-    <ClCompile Include="src\D3D11\RenderTarget.cpp" />
-    <ClCompile Include="src\D3D11\Shader.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\main_old.h" />
-    <ClCompile Include="src\Window\TransparentWindow.cpp" />
+    <ClCompile Include="src\application.cc" />
+    <ClCompile Include="src\d3d11\blender_manager.cc" />
+    <ClCompile Include="src\d3d11\bloom_border_renderer.cc" />
+    <ClCompile Include="src\d3d11\highlight_renderer.cc" />
+    <ClCompile Include="src\d3d11\render_target.cc" />
+    <ClCompile Include="src\d3d11\sampler_manager.cpp" />
+    <ClCompile Include="src\d3d11\sdf.cc" />
+    <ClCompile Include="src\d3d11\shader.cc" />
+    <ClCompile Include="src\main.cc" />
+    <ClCompile Include="src\window\render_state.cc" />
+    <ClCompile Include="src\window\transparent_window.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Application.h" />
-    <ClInclude Include="src\D3D11\BloomBorderRenderer.h" />
-    <ClInclude Include="src\D3D11\ConstantBuffer.h" />
-    <ClInclude Include="src\D3D11\Quad.h" />
-    <ClInclude Include="src\D3D11\Renderer.h" />
-    <ClInclude Include="src\D3D11\RenderTarget.h" />
-    <ClInclude Include="src\D3D11\Shader.h" />
-    <ClInclude Include="src\D3D11\Texture.h" />
-    <ClInclude Include="src\Window\TransparentWindow.h" />
-    <ClInclude Include="src\Window\Window.h" />
+    <ClInclude Include="src\application.h" />
+    <ClInclude Include="src\common\core.h" />
+    <ClInclude Include="src\d3d11\blender_manager.h" />
+    <ClInclude Include="src\d3d11\bloom_border_renderer.h" />
+    <ClInclude Include="src\d3d11\constant_buffer.h" />
+    <ClInclude Include="src\d3d11\drawable_object.h" />
+    <ClInclude Include="src\d3d11\draw_command.h" />
+    <ClInclude Include="src\d3d11\highlight_renderer.h" />
+    <ClInclude Include="src\d3d11\quad.h" />
+    <ClInclude Include="src\d3d11\sampler_manager.h" />
+    <ClInclude Include="src\d3d11\sdf.h" />
+    <ClInclude Include="src\d3d11\renderer.h" />
+    <ClInclude Include="src\d3d11\render_target.h" />
+    <ClInclude Include="src\d3d11\shader.h" />
+    <ClInclude Include="src\mathematics\lingal.h" />
+    <ClInclude Include="src\mathematics\Transform.h" />
+    <ClInclude Include="src\system\threading.h" />
+    <ClInclude Include="src\visual\Camera.h" />
+    <ClInclude Include="src\window\render_state.h" />
+    <ClInclude Include="src\window\transparent_window.h" />
+    <ClInclude Include="src\window\window.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="src\Asset\InnerCursor.png" />
-    <Image Include="src\Asset\OuterCursor.png" />
+    <None Include=".editorconfig" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
