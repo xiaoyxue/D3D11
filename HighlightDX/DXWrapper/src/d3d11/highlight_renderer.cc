@@ -61,10 +61,10 @@ namespace D3D11 {
     quad_->CreateSamplerState(&sampler_manager_);
     quad_->CreateBendState(&blender_manager_);
 
-    // Load Quad texture: Auto-load OuterCursor.png
+    // Load Quad texture: Auto-load CombinedCursor.png
     auto quad = static_cast<Quad*>(quad_.get());
-    if (!quad->LoadTexture(device_.Get(), context_.Get(), L"D:\\Code\\Work\\D3D11\\HighlightDX\\DXWrapper\\asset\\InnerCursor.png")) {
-      MessageBoxW(nullptr, L"Failed to load OuterCursor.png texture", L"Warning", MB_OK | MB_ICONWARNING);
+    if (!quad->LoadTexture(device_.Get(), context_.Get(), L"asset/CombinedCursor.png")) {
+      MessageBoxW(nullptr, L"Failed to load CombinedCursor.png texture", L"Warning", MB_OK | MB_ICONWARNING);
       // Continue execution even if texture loading fails, should not block initialization
     }
 
@@ -163,6 +163,7 @@ namespace D3D11 {
     desc.BufferCount = 2;
     desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
     desc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
+    //desc.AlphaMode = DXGI_ALPHA_MODE_STRAIGHT;
 
     return SUCCEEDED(factory->CreateSwapChainForComposition(
       device_.Get(), &desc, nullptr, &swap_chain_));
@@ -250,11 +251,21 @@ namespace D3D11 {
 
   void HighlightRenderer::DrawSDF(DrawCommand* command, float time)
   {
+    if (command->GetType() != DrawCommandType::FULLSCREEN &&
+      command->GetType() != DrawCommandType::BOX &&
+        command->GetType() != DrawCommandType::CIRCLE) {
+      return;
+    }
     // Ensure blend state is set
     float blendFactor[4] = {0, 0, 0, 0};
     context_->OMSetBlendState(blend_state_.Get(), blendFactor, 0xffffffff);
     
     sdf_->Draw(context_.Get(), back_buffer_rtv_.Get(), command, time);
+  }
+
+  void HighlightRenderer::Debug() {
+    float blendFactor[4] = { 0, 0, 0, 0 };
+    context_->OMSetBlendState(blend_state_.Get(), blendFactor, 0xffffffff);
   }
 
   void HighlightRenderer::DrawQuad(DrawCommand* command, float time)
@@ -271,19 +282,32 @@ namespace D3D11 {
     auto quad = static_cast<Quad*>(quad_.get());
     auto cursor_command = static_cast<DrawCursorCommand*>(command);
     
-    // Set initial position (cursor position)
-    quad->SetPosition(cursor_command->GetX(), cursor_command->GetY());
+    // Set size (now using ±0.5 vertices, so this directly corresponds to pixels)
+    float sizeX = 75.0f;
+    float sizeY = 75.0f;
+    quad->SetSize(sizeX, sizeY);
     
-    // Use default rotation (45 degrees counter-clockwise)
-    quad->SetRotation(45.0f / 180.0f * PI);
+    // Use rotation from command (default is 45 degrees)
+    quad->SetRotation(cursor_command->GetRotate());
     
-    // Set size
-    quad->SetSize(100.0f, 100.0f);
+    // After rotation by 45 degrees, offset the quad to the bottom-right
+    // by half the height distance (in the rotated coordinate system)
+    // For 45 degree rotation: offset = (height/2 / sqrt(2), height/2 / sqrt(2))
+    constexpr float inv_sqrt_2 = 0.7071067811865475f;  // 1 / sqrt(2)
+    float delta = cursor_command->GetDisplacementMagnitude() * 0.1f;
+    float offset = sizeY * 0.5f * inv_sqrt_2 + delta;
+
+  
+    // Set initial position (cursor position + rotation offset)
+    quad->SetPosition(
+      cursor_command->GetX() + offset, 
+      cursor_command->GetY() + offset
+    );
     
     // Keep scale constant at 1.0 (no scale animation)
     quad->SetScale(1.0f, 1.0f);
     
-    // Animation: Calculate translation matrix (like SimpleQuad)
+    // Animation: Calculate translation matrix using displacementMagnitude from command
     auto now = std::chrono::steady_clock::now();
     float animation_time = std::chrono::duration<float>(
       now - cursor_command->GetAnimationStartTime()
@@ -293,9 +317,12 @@ namespace D3D11 {
     float animation_ratio = animation_time / max_animation_time;
     if (animation_ratio > 1.0f) animation_ratio = 1.0f;
     
+    // Use displacement magnitude from command
+    // For 45-degree movement, multiply by 1/sqrt(2) to get correct screen-space components
+    float displacement = cursor_command->GetDisplacementMagnitude();
     auto translate_matrix = DirectX::XMMatrixTranslation(
-      100.0f * animation_ratio,
-      -100.0f * animation_ratio,
+      displacement * inv_sqrt_2 * animation_ratio,
+      -displacement * inv_sqrt_2 * animation_ratio,
       0.0f
     );
     
@@ -345,9 +372,7 @@ namespace D3D11 {
     DrawCommands(iTime);
 
     // SwapChain present
-    swap_chain_->Present(0, 0);
+    swap_chain_->Present(1, 0);
 
-    // Update fps
-    UpdateFps(hwnd);
   }
 }

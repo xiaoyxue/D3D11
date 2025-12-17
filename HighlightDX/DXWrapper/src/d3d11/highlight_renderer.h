@@ -41,6 +41,7 @@ namespace D3D11 {
     void DrawQuad(DrawCommand* command, float time);
     void DrawCommands(float time);
 
+    void Debug();
   private:
     // Device & Context
     Microsoft::WRL::ComPtr<ID3D11Device> device_;

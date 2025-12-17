@@ -24,13 +24,13 @@ namespace D3D11 {
 
     float iRadius;
     float maxAnimationTime;
-    float _padding1;
-    float _padding2;
+    float borderWidth;
+    int AA;
     // Total: 16 bytes
 
     ShaderConstants() : iType(0), iTime(0.0f), animationTime(0.0f),
       whFactor(2.005f), iRadius(0.0f), maxAnimationTime(2.0f),
-      _padding1(0.0f), _padding2(0.0f) {
+      borderWidth(0.0f), AA(1) {
       iResolution[0] = iResolution[1] = 0.0f;
       iCenter[0] = iCenter[1] = 0.0f;
     }
@@ -56,19 +56,11 @@ namespace D3D11 {
 
   private:
     bool CreateShaders(ID3D11Device* device);
-    bool CreateRenderTargets(ID3D11Device* device);
     bool CreateConstantBuffer(ID3D11Device* device);
 
-    void RenderOriginal(ID3D11DeviceContext* context, DrawCommand* command, float iTime);
-    void RenderBlurH(ID3D11DeviceContext* context, float iTime);
-    void RenderBlurV(ID3D11DeviceContext* context, float iTime);
-    void RenderCompositeToTarget(ID3D11DeviceContext* context, ID3D11RenderTargetView* rtv, DrawCommand* command, float iTime);
+    void RenderCommand(ID3D11DeviceContext* context, ID3D11RenderTargetView* rtv, DrawCommand* command, float iTime);
 
   private:
-    // Render Targets
-    std::unique_ptr<RenderTarget> rt_original_;
-    std::unique_ptr<RenderTarget> rt_blur_h_;
-    std::unique_ptr<RenderTarget> rt_blur_v_;
 
     // Resources
     std::unique_ptr<ConstantBuffer<ShaderConstants>> constant_buffer_;
@@ -78,10 +70,7 @@ namespace D3D11 {
 
     // Shaders
     std::unique_ptr<VertexShader> vertex_shader_;
-    std::unique_ptr<PixelShader> ps_original_;
-    std::unique_ptr<PixelShader> ps_blur_h_;
-    std::unique_ptr<PixelShader> ps_blur_v_;
-    std::unique_ptr<PixelShader> ps_composite_;
+    std::unique_ptr<PixelShader> pixel_shader_;
 
     // properties
     int width_;

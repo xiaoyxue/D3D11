@@ -126,4 +126,15 @@
   <ItemGroup>
     <None Include=".editorconfig" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="asset\CombinedCursor.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="asset\InnerCursor.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="asset\OuterCursor.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

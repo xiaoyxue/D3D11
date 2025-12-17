@@ -10,6 +10,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
   // First draw fullscreen immediately
   app.AddDrawCommand(std::make_unique<D3D11::DrawFullScreenCommand>(app.GetWidth(), app.GetHeight()));
-  //app.AddDrawCommand(std::make_unique<D3D11::DrawCursorCommand>(500, 500));
+
   return app.Run();
 }

@@ -121,11 +121,12 @@ bool Quad::CreateShaders(ID3D11Device* device) {
 
 bool Quad::CreateBuffers(ID3D11Device* device) {
 // Vertex buffer - 4 vertices with texture coordinates
+// Using ±0.5 so that SetSize() parameters directly correspond to pixel dimensions
 QuadVertex vertices[] = {
-  { -0.337f,  0.355f, 0.0f,  0.0f, 0.0f },  // TL
-  {  0.337f,  0.355f, 0.0f,  1.0f, 0.0f },  // TR
-  {  0.337f, -0.355f, 0.0f,  1.0f, 1.0f },  // BR
-  { -0.337f, -0.355f, 0.0f,  0.0f, 1.0f }   // BL
+  { -0.5f,  0.5f, 0.0f,  0.0f, 0.0f },  // TL
+  {  0.5f,  0.5f, 0.0f,  1.0f, 0.0f },  // TR
+  {  0.5f, -0.5f, 0.0f,  1.0f, 1.0f },  // BR
+  { -0.5f, -0.5f, 0.0f,  0.0f, 1.0f }   // BL
 };
 
   D3D11_BUFFER_DESC vb_desc = {};

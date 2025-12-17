@@ -1,5 +1,5 @@
 #include "sdf.h"
-#include "mathematics/Transform.h"
+#include "mathematics/transform.h"
 
 namespace D3D11 {
   static_assert(sizeof(ShaderConstants) % 16 == 0, "ShaderConstants must be aligned to 16 bytes");
@@ -20,8 +20,9 @@ VSOutput main(uint vertexID : SV_VertexID)
 }
 )";
 
-  // Pass 1:
-  static const char* pixel_shader_original = R"(
+
+static const char* pixel_shader = R"(
+
 cbuffer Constants : register(b0)
 {
     int iType;
@@ -34,7 +35,9 @@ cbuffer Constants : register(b0)
 
     float iRadius;
     float maxAnimationTime;
-    float2 _padding;
+    float borderWidth;
+    int AA;
+    
 };
 
 struct PSInput
@@ -58,222 +61,96 @@ float4 main(PSInput input) : SV_TARGET
 {
     float2 fragCoord = input.uv * iResolution;
     float2 normalizedCoord = fragCoord - iResolution / 2.0;
-    float2 b = iResolution / whFactor;
-    float radiusRatio = min(animationTime / maxAnimationTime, 1.0);
+    float3 baseColor = float3(1.0, 0.5, 0.0);
+    float radiusRatio = 1.0;
     float d = 0.0;
     if (iType == 0 || iType == 1)
     {
+        float2 b = iResolution / whFactor;
         d = sdBox(normalizedCoord, b);
     }
     else if (iType == 2)
     {
+        radiusRatio = min(animationTime / maxAnimationTime, 1.0);
         d = sdCircle(normalizedCoord - iCenter, iRadius * radiusRatio);
     }
-
-    float2 uv = fragCoord / iResolution;
-    //float3 col = 0.5 + 0.5 * cos(iTime + float3(uv.x, uv.y, uv.x) + float3(0, 2, 4));
-    float3 col = 0.6 * float3(1, 0.5, 0) + 0.4 * abs(cos(iTime * 1.5)) * float3(1, 0.5, 0);
-    float scale = 1.0;
-
     if (iType == 0)
     {
-      d = -d;
+        d = -d;
     }
 
-    if (d < 0.0)
+    //float alpha = abs(cos(iTime * 1.5));
+    float aaWidth = 3.0;
+
+    if (iType == 2)
     {
-        return float4(col * scale, 1.0);
+        bool needAA = (d > -aaWidth && d < aaWidth);
+        
+        if (needAA)
+        {
+            // SSAA
+            float alphaSum = 0.0;
+            int gridSize = AA;  // N x N grids
+            int samples = gridSize * gridSize;
+            float3 colorSum = float3(0.0, 0.0, 0.0);
+            
+            for (int y = 0; y < gridSize; y++)
+            {
+                for (int x = 0; x < gridSize; x++)
+                {
+                    // Sample offset
+                    float2 offset = float2(
+                        (float(x) + 0.5) / float(gridSize) - 0.5,
+                        (float(y) + 0.5) / float(gridSize) - 0.5
+                    );
+                    
+                    float2 sampleCoord = normalizedCoord + offset;
+                    float sampleD = sdCircle(sampleCoord - iCenter, iRadius * radiusRatio);
+                    
+                    if (sampleD > 0.0 && sampleD < borderWidth)
+                    {
+                        // Calculate color based on distance from edge
+                        float deltaEdge = 1.0;
+                        float3 sampleColor;
+                        
+                        if (sampleD < deltaEdge)
+                        {
+                            // Near edge: use black
+                            sampleColor = float3(0.0, 0.0, 0.0);
+                        }
+                        else
+                        {
+                            // Far from edge: use base color
+                            sampleColor = baseColor;
+                        }
+                        
+                        colorSum += sampleColor;
+                        float sampleAlpha = 1.0 - smoothstep(0.0, borderWidth, sampleD);
+                        alphaSum += sampleAlpha;
+                    }
+                }
+            }
+            
+            float alpha = (alphaSum / float(samples)) * abs(cos(iTime * 1.5));
+            float3 finalColor = colorSum / float(samples);
+
+            if (alpha > 0.0)
+            {
+                return float4(finalColor * alpha, alpha); 
+            }
+            
+            return float4(0, 0, 0, 0);
+        }
     }
-    else
+
+    if (d > 0.0 && d < borderWidth)
     {
-        return float4(0, 0, 0, 0);
+        float alpha = (1.0 - smoothstep(0.0, borderWidth, d)) * abs(cos(iTime * 1.5));
+        return float4(baseColor * alpha, alpha);  
     }
-}
-)";
+    
+    return float4(0, 0, 0, 0);
 
-  // Pass 2:
-  static const char* pixel_shader_blur_h = R"(
-#define SIGMA 10.0
-
-cbuffer Constants : register(b0)
-{
-    int iType;
-    float2 iResolution;
-    float iTime;
-
-    float animationTime;
-    float whFactor;
-    float2 iCenter;
-
-    float iRadius;
-    float maxAnimationTime;
-    float2 _padding;
-};
-
-Texture2D inputTexture : register(t0);
-SamplerState samplerState : register(s0);
-
-struct PSInput
-{
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
-};
-
-float gaussian(float x, float sigma)
-{
-    return exp(-(x * x) / (2.0 * sigma * sigma));
-}
-
-float4 main(PSInput input) : SV_TARGET
-{
-    float2 texelSize = 1.0 / iResolution;
-    float sigma = SIGMA;
-    int radius = int(ceil(3.0 * sigma));
-
-    float3 result = float3(0, 0, 0);
-    float weightSum = 0.0;
-
-    for (int x = -radius; x <= radius; x++)
-    {
-        float weight = gaussian(float(x), sigma);
-        float2 offset = float2(float(x) * texelSize.x, 0.0);
-
-        result += inputTexture.Sample(samplerState, input.uv + offset).rgb * weight;
-        weightSum += weight;
-    }
-
-    return float4(result / weightSum, 1.0);
-}
-)";
-
-  // Pass 3:
-  static const char* pixel_shader_blur_v = R"(
-#define SIGMA 10.0
-
-cbuffer Constants : register(b0)
-{
-    int iType;
-    float2 iResolution;
-    float iTime;
-
-    float animationTime;
-    float whFactor;
-    float2 iCenter;
-
-    float iRadius;
-    float maxAnimationTime;
-    float2 _padding;
-};
-
-Texture2D inputTexture : register(t0);
-SamplerState samplerState : register(s0);
-
-struct PSInput
-{
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
-};
-
-float gaussian(float x, float sigma)
-{
-    return exp(-(x * x) / (2.0 * sigma * sigma));
-}
-
-float4 main(PSInput input) : SV_TARGET
-{
-    float2 texelSize = 1.0 / iResolution;
-    float sigma = SIGMA;
-    int radius = int(ceil(3.0 * sigma));
-
-    float3 result = float3(0, 0, 0);
-    float weightSum = 0.0;
-
-    for (int y = -radius; y <= radius; y++)
-    {
-        float weight = gaussian(float(y), sigma);
-        float2 offset = float2(0.0, float(y) * texelSize.y);
-
-        result += inputTexture.Sample(samplerState, input.uv + offset).rgb * weight;
-        weightSum += weight;
-    }
-
-    return float4(result / weightSum, 1.0);
-}
-)";
-
-  // Pass 4:
-  static const char* pixel_shader_composite = R"(
-#define BLOOM_STRENGTH 1.8
-#define SIGMA 10.0
-
-cbuffer Constants : register(b0)
-{
-    int iType;
-    float2 iResolution;
-    float iTime;
-
-    float animationTime;
-    float whFactor;
-    float2 iCenter;
-
-    float iRadius;
-    float maxAnimationTime;
-    float2 _padding;
-};
-
-Texture2D bloomTexture : register(t0);
-SamplerState samplerState : register(s0);
-
-struct PSInput
-{
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
-};
-
-float sdBox(float2 p, float2 b)
-{
-    float2 d = abs(p) - b;
-    return length(max(d, float2(0, 0))) + min(max(d.x, d.y), 0.0);
-}
-
-float sdCircle(float2 p, float r)
-{
-    return length(p) - r;
-}
-
-float4 main(PSInput input) : SV_TARGET
-{
-    float2 fragCoord = input.uv * iResolution;
-    float2 normalizedCoord = fragCoord - iResolution / 2.0;
-    float2 b = iResolution / whFactor;
-    float radiusRatio = min(animationTime / maxAnimationTime, 1.0);
-
-    float d = 0.0;
-    if (iType == 0 || iType == 1)
-    {
-      d = sdBox(normalizedCoord, b);
-    }
-    else if (iType == 2)
-    {
-      d = sdCircle(normalizedCoord - iCenter, iRadius * radiusRatio);
-    }
-
-    float3 bloom = bloomTexture.Sample(samplerState, input.uv).rgb;
-    float3 color = bloom * BLOOM_STRENGTH;
-
-    if (iType == 0)
-    {
-      d = -d;
-    }
-
-    if (d > 0.0)
-    {
-		    return float4(color, 0.0);
-    }
-    else
-    {
-        return float4(0, 0, 0, 0);
-    }
 }
 )";
 
@@ -284,9 +161,6 @@ float4 main(PSInput input) : SV_TARGET
 
   void SDF::Initialize(ID3D11Device* device)
   {
-    if (!CreateRenderTargets(device)) {
-      MessageBoxW(nullptr, L"Failed to CreateRenderTargets", L"Error", MB_OK);
-    }
     if (!CreateShaders(device)) {
       MessageBoxW(nullptr, L"Failed to CreateShaders", L"Error", MB_OK);
     }
@@ -311,47 +185,10 @@ float4 main(PSInput input) : SV_TARGET
     if (!vertex_shader_->CompileFromSource(device, vertex_shader)) {
       return false;
     }
-
-    ps_original_ = std::make_unique<PixelShader>();
-    if (!ps_original_->CompileFromSource(device, pixel_shader_original)) {
+    pixel_shader_ = std::make_unique<PixelShader>();
+    if (!pixel_shader_->CompileFromSource(device, pixel_shader)) {
       return false;
     }
-
-    ps_blur_h_ = std::make_unique<PixelShader>();
-    if (!ps_blur_h_->CompileFromSource(device, pixel_shader_blur_h)) {
-      return false;
-    }
-
-    ps_blur_v_ = std::make_unique<PixelShader>();
-    if (!ps_blur_v_->CompileFromSource(device, pixel_shader_blur_v)) {
-      return false;
-    }
-
-    ps_composite_ = std::make_unique<PixelShader>();
-    if (!ps_composite_->CompileFromSource(device, pixel_shader_composite)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  bool SDF::CreateRenderTargets(ID3D11Device* device)
-  {
-    rt_original_ = std::make_unique<RenderTarget>();
-    if (!rt_original_->Create(device, width_, height_)) {
-      return false;
-    }
-
-    rt_blur_h_ = std::make_unique<RenderTarget>();
-    if (!rt_blur_h_->Create(device, width_, height_)) {
-      return false;
-    }
-
-    rt_blur_v_ = std::make_unique<RenderTarget>();
-    if (!rt_blur_v_->Create(device, width_, height_)) {
-      return false;
-    }
-
     return true;
   }
 
@@ -364,129 +201,38 @@ float4 main(PSInput input) : SV_TARGET
     return true;
   }
 
-  void SDF::RenderOriginal(ID3D11DeviceContext* context, DrawCommand* command, float iTime)
-  {
-    float clear[4] = { 0, 0, 0, 0 };
-    context->ClearRenderTargetView(rt_original_->GetRTV(), clear);
-    context->OMSetRenderTargets(1, rt_original_->GetRTVAddress(), nullptr);
-
-    // Update constants
-    ShaderConstants constants;
-    if (command->GetType() == DrawCommandType::FULLSCREEN) {
-      auto fulls_screen_command = static_cast<DrawFullScreenCommand*>(command);
-      constants.iType = static_cast<int>(DrawCommandType::FULLSCREEN);
-      constants.iResolution[0] = static_cast<float>(fulls_screen_command->GetWidth() / 4.0);
-      constants.iResolution[1] = static_cast<float>(fulls_screen_command->GetHeight() / 4.0);
-      constants.maxAnimationTime = 1.0f; //1s
-    }
-
-    if (command->GetType() == DrawCommandType::CIRCLE) {
-      auto circle_command = static_cast<DrawCircleCommand*>(command);
-      constants.iType = static_cast<int>(DrawCommandType::CIRCLE);
-      constants.iResolution[0] = static_cast<float>(width_);
-      constants.iResolution[1] = static_cast<float>(height_);
-      auto ndc = Transform::ScreenToNDC(static_cast<int>(circle_command->GetX()), static_cast<int>(circle_command->GetY()), width_, height_);
-      constants.iCenter[0] = ndc.x;
-      constants.iCenter[1] = ndc.y;
-      constants.iRadius = circle_command->GetRadius();
-      constants.maxAnimationTime = 1.f; 
-      auto now = std::chrono::steady_clock::now();
-      constants.animationTime = std::chrono::duration<float>(now - circle_command->GetAnimationStartTime()).count();
-
-    }
-
-    constants.iTime = iTime;
-    constants.whFactor = wh_factor_;
-    constant_buffer_->Update(context, constants);
-
-    // Set shader and resources
-    context->PSSetShader(ps_original_->Get(), nullptr, 0);
-    context->PSSetConstantBuffers(0, 1, constant_buffer_->GetAddressOf());
-
-    // Draw
-    context->Draw(3, 0);
-  }
-
-  void SDF::RenderBlurH(ID3D11DeviceContext* context, float iTime)
-  {
-    // Set render target
-    context->OMSetRenderTargets(1, rt_blur_h_->GetRTVAddress(), nullptr);
-
-    // Update constants
-    ShaderConstants constants;
-    constants.iResolution[0] = static_cast<float>(width_);
-    constants.iResolution[1] = static_cast<float>(height_);
-    constants.iTime = iTime;
-    // constants.whFactor = wh_factor_;
-    constant_buffer_->Update(context, constants);
-
-    // Set shader and resources
-    context->PSSetShader(ps_blur_h_->Get(), nullptr, 0);
-    context->PSSetConstantBuffers(0, 1, constant_buffer_->GetAddressOf());
-    context->PSSetShaderResources(0, 1, rt_original_->GetSRVAddress());
-    context->PSSetSamplers(0, 1, sampler_state_.GetAddressOf());
-
-    // Draw
-    context->Draw(3, 0);
-  }
-
-  void SDF::RenderBlurV(ID3D11DeviceContext* context, float iTime)
-  {
-    // Set render target
-    context->OMSetRenderTargets(1, rt_blur_v_->GetRTVAddress(), nullptr);
-
-    // Update constants
-    ShaderConstants constants;
-    constants.iResolution[0] = static_cast<float>(width_);
-    constants.iResolution[1] = static_cast<float>(height_);
-    constants.iTime = iTime;
-    // constants.whFactor = wh_factor_;
-    constant_buffer_->Update(context, constants);
-
-    // Unbind previous SRV to avoid hazard
-    ID3D11ShaderResourceView* nullSRV = nullptr;
-    context->PSSetShaderResources(0, 1, &nullSRV);
-
-    // Set shader and resources
-    context->PSSetShader(ps_blur_v_->Get(), nullptr, 0);
-    context->PSSetConstantBuffers(0, 1, constant_buffer_->GetAddressOf());
-    context->PSSetShaderResources(0, 1, rt_blur_h_->GetSRVAddress());
-    context->PSSetSamplers(0, 1, sampler_state_.GetAddressOf());
-
-    // Draw
-    context->Draw(3, 0);
-  }
-
-  void SDF::RenderCompositeToTarget(ID3D11DeviceContext* context, ID3D11RenderTargetView* rtv, DrawCommand* command, float iTime)
+  
+  void SDF::RenderCommand(ID3D11DeviceContext* context, ID3D11RenderTargetView* rtv, DrawCommand* command, float iTime)
   {
     context->OMSetRenderTargets(1, &rtv, nullptr);
+    float blendFactor[4] = { 0, 0, 0, 0 };
+    context->OMSetBlendState(blend_state_.Get(), blendFactor, 0xffffffff);
 
     // Update constants
     ShaderConstants constants;
     if (command->GetType() == DrawCommandType::FULLSCREEN) {
       auto fulls_screen_command = static_cast<DrawFullScreenCommand*>(command);
       constants.iType = static_cast<int>(DrawCommandType::FULLSCREEN);
-      constants.iResolution[0] = static_cast<float>(fulls_screen_command->GetWidth() / 4.0);
-      constants.iResolution[1] = static_cast<float>(fulls_screen_command->GetHeight() / 4.0);
-      constants.maxAnimationTime = 1.0f;
     }
 
     if (command->GetType() == DrawCommandType::CIRCLE) {
       auto circle_command = static_cast<DrawCircleCommand*>(command);
       constants.iType = static_cast<int>(DrawCommandType::CIRCLE);
-      constants.iResolution[0] = static_cast<float>(width_);
-      constants.iResolution[1] = static_cast<float>(height_);
       auto ndc = Transform::ScreenToNDC(static_cast<int>(circle_command->GetX()), static_cast<int>(circle_command->GetY()), width_, height_);
       constants.iCenter[0] = ndc.x;
       constants.iCenter[1] = ndc.y;
       constants.iRadius = circle_command->GetRadius();
-      constants.maxAnimationTime = 1.0f;
       auto now = std::chrono::steady_clock::now();
       constants.animationTime = std::chrono::duration<float>(now - circle_command->GetAnimationStartTime()).count();
     }
 
+    constants.maxAnimationTime = 1.0f;
     constants.iTime = iTime;
     constants.whFactor = wh_factor_;
+    constants.iResolution[0] = static_cast<float>(width_);
+    constants.iResolution[1] = static_cast<float>(height_);
+    constants.borderWidth = 15.0f;
+    constants.AA = 4;
     constant_buffer_->Update(context, constants);
 
     // Unbind previous SRV
@@ -494,10 +240,9 @@ float4 main(PSInput input) : SV_TARGET
     context->PSSetShaderResources(0, 1, &nullSRV);
 
     // Set shader and resources
-    context->PSSetShader(ps_composite_->Get(), nullptr, 0);
+    context->PSSetShader(pixel_shader_->Get(), nullptr, 0);
     context->PSSetConstantBuffers(0, 1, constant_buffer_->GetAddressOf());
-    context->PSSetShaderResources(0, 1, rt_blur_v_->GetSRVAddress());
-    context->PSSetSamplers(0, 1, sampler_state_.GetAddressOf());
+
 
     // Draw
     context->Draw(3, 0);
@@ -510,13 +255,10 @@ float4 main(PSInput input) : SV_TARGET
     context->IASetInputLayout(nullptr);
 
     if (command->GetType() == DrawCommandType::FULLSCREEN) {
-      wh_factor_ = 2.005f;
+      wh_factor_ = 2.00f;
     }
 
-    RenderOriginal(context, command, time);
-    RenderBlurH(context, time);
-    RenderBlurV(context, time);
-    RenderCompositeToTarget(context, rtv, command, time);
+    RenderCommand(context, rtv, command, time);
 
   }
 }
